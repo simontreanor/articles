@@ -23,7 +23,7 @@ type Shape =
 A `Shape` is either a `Circle` with a `radius`, or a `Rectangle` with `width` and `height`. Nothing else is allowed; the type is **closed**.
 ### 1.2 TypeScript tagged unions
 
-TypeScript can emulate this with tagged unions (its own term for DUs).
+TypeScript can emulate this with tagged unions (more commonly called *discriminated unions* in the TypeScript handbook).
 ```ts
 type Shape =
   | { kind: "circle";    radius: number }
@@ -44,7 +44,7 @@ For LLMs, you want to be explicit in your prompts:
 Even this one constraint significantly shapes the output style.
 ***
 
-## 2. Exhaustive Pattern Matching and `satisfies`
+## 2. Exhaustive Pattern Matching (`never` + `satisfies`)
 
 F#’s `match` is more than syntactic sugar: the compiler can tell you when you’ve forgotten to handle a case.
 ### 2.1 F# exhaustive pattern matching
@@ -59,25 +59,22 @@ let area shape =
 If you later add `| Triangle of base: float * height: float`, the compiler warns unless you update `area`.
 ### 2.2 TypeScript exhaustive matching with `satisfies never`
 
-TypeScript's `switch` doesn't enforce exhaustiveness by default, but it can be approximated using the `never` type and the `satisfies` operator.
+TypeScript's `switch` doesn't enforce exhaustiveness by default, but you can force a compile-time check in the `default` branch using `value satisfies never` (introduced in TypeScript 4.9).
 ```ts
 function getArea(shape: Shape): number {
-  let area: number;
   switch (shape.kind) {
     case "circle":
-      area = Math.PI * shape.radius ** 2;
-      break;
+      return Math.PI * shape.radius ** 2;
     case "rectangle":
-      area = shape.width * shape.height;
-      break;
-    default:
-      area = shape satisfies never;
+      return shape.width * shape.height;
+    default: {
+      throw new Error(`Unhandled shape: ${shape satisfies never}`);
+    }
   }
-  return area;
 }
 ```
 
-If you add a new `kind` to `Shape` but forget to handle it here, `shape satisfies never` causes a compile-time error.
+If you add a new `kind` to `Shape` but forget to handle it here, the `shape satisfies never` line becomes a compile-time error.
 This is the **consumption-site** exhaustiveness check.
 ### 2.3 Exhaustiveness at mapping sites
 
@@ -101,7 +98,7 @@ This is the **definition-site** check: the object must cover all keys in the uni
 
 Encode this in your prompts:
 
-> "For every `switch` on a tagged union, add a `default` case that assigns `value satisfies never` to the result variable so that missing cases are compile-time errors."
+> "For every `switch` on a tagged union, add a `default` case like `default: { value satisfies never; throw new Error('unreachable'); }` so that missing cases become compile-time errors."
 
 > “For mappings over union keys, define objects that `satisfies Record<Union, T>` to guarantee all keys are covered.”
 
@@ -228,7 +225,7 @@ function divideSafe(x: number, y: number): Result<number, "DivideByZero"> {
 }
 ```
 
-Callers must inspect `ok`, mirroring F#'s `Result`. Libraries like `neverthrow` and `Effect` (the successor to `fp-ts`) provide richer ecosystems around this idea.
+Callers must inspect `ok`, mirroring F#'s `Result`. Libraries like `neverthrow` and `Effect` provide richer ecosystems around this idea.
 ### 4.4 LLM guidance
 
 > “Do not throw exceptions for domain-level failures. Instead, return a `Result<T, E>` tagged union.”
@@ -274,6 +271,8 @@ function pipe(a: unknown, ...fns: Unary<any, any>[]): unknown {
   return fns.reduce((v, f) => f(v), a);
 }
 
+const basePrice = 100;
+
 const applyDiscount  = (pct: number) => (amount: number) => amount * (1 - pct);
 const applyVat       = (amount: number) => amount * 1.2;
 const formatCurrency = (amount: number) => `£${amount.toFixed(2)}`;
@@ -283,6 +282,8 @@ const label = pipe(basePrice, applyDiscount(0.1), applyVat, formatCurrency);
 ```
 
 TC39's pipeline proposal may eventually reduce the need for this, but for now, a standard `pipe` helper is a good pattern to encourage from LLMs.
+
+(If you want to track the proposal directly, the repository is: https://github.com/tc39/proposal-pipeline-operator)
 ### 5.3 Currying and partial application
 
 In F#, all functions are curried automatically: a two-argument function is really a function that returns a function, so partial application requires no extra syntax:
@@ -349,7 +350,7 @@ const Feet   = (n: number): Feet   => n as Feet;
 const dMeters = Meters(10);
 const dFeet   = Feet(32.8);
 
-// let total: Meters = dMeters + dFeet; // Type error: Feet not assignable to Meters
+// let total: Meters = dMeters + dFeet; // Type error: 'number' is not assignable to type 'Meters'
 ```
 
 You can generalise this using `unique symbol` for extra safety:
@@ -381,7 +382,8 @@ function updateUser(id: UserId, orgId: OrgId) { /* ... */ }
 You cannot accidentally swap the arguments without a compile error.
 ### 6.4 Arithmetic and JSON gaps
 
-- Arithmetic on brands tends to “forget” the brand (because the compiler sees `number` operations), so you may need domain-specific helpers or re-branding.- When deserialising JSON, brands don’t exist at runtime; you must re-validate and brand at the boundary (e.g. using Zod).
+- Arithmetic on brands tends to “forget” the brand (because the compiler sees `number` operations), so you may need domain-specific helpers or re-branding.
+- When deserialising JSON, brands don’t exist at runtime; you must re-validate and brand at the boundary (e.g. using Zod).
 ### 6.5 Prompting for branded types
 
 > “Define branded (nominal) types for all domain identifiers (e.g. `UserId`, `OrderId`) and measurements. Functions that operate on those values must use the branded types so they cannot be confused.”
@@ -435,8 +437,10 @@ switch (method.type) {
     break;
   case "Unknown":
     break;
-  default:
+  default: {
     method satisfies never;
+    throw new Error("Unhandled ContactMethod");
+  }
 }
 ```
 
@@ -459,12 +463,12 @@ This pairs nicely with nullish coalescing and avoids boolean blindness.
 
 In functional optics:
 
-- A **Lens** focuses on a part that **always exists** (e.g. `User.name`).- A **Prism** focuses on a part that **might exist**, often inside a union (e.g. the `Circle` inside `Shape`).
+- A **Lens** focuses on a part that **always exists** (e.g. `User.name`).
+- A **Prism** focuses on a part that **might exist**, often inside a union (e.g. the `Circle` inside `Shape`).
 Matcher functions are hand-built prisms: given arbitrary input, return either `{ type: "Email"; ... }` or `{ type: "Unknown" }`.
 Asking LLMs to produce matchers rather than deeply nested `if` chains produces more F#-like structure.
 ### 7.5 Prompting for classification-first design
-
-> “Don’t embed complex business logic directly in UI handlers or controllers. Instead, create ‘matcher’ functions that classify raw inputs into tagged unions, then handle those via exhaustive `switch` with `satisfies never`.”
+> “Don’t embed complex business logic directly in UI handlers or controllers. Instead, create ‘matcher’ functions that classify raw inputs into tagged unions, then handle those via exhaustive `switch` with a `satisfies never` exhaustiveness check.”
 
 This separates *classification* from *handling*, much like active patterns.
 ***
@@ -635,6 +639,8 @@ export const User = {
 };
 ```
 
+Note on imports: exporting a `type User` and a `const User` from the same module is legal (types and values live in different namespaces), but when importing from another file you may want `import type { User } from "./User";` alongside `import { User } from "./User";` depending on whether you need the type, the value, or both.
+
 Usage:
 
 ```ts
@@ -673,7 +679,7 @@ This discourages anemic class patterns in favour of F#-like module design.
 | F# feature                 | TypeScript “functional” equivalent                              | Parity level / notes                         |
 |---------------------------|------------------------------------------------------------------|----------------------------------------------|
 | Discriminated Union       | Tagged union with `kind` discriminator                          | High; more boilerplate                        |
-| Exhaustive pattern match  | `switch` + `satisfies never`                                     | High at usage and mapping sites               |
+| Exhaustive pattern match  | `switch` + `value satisfies never` (and `satisfies Record<...>` for total mappings) | High at usage and mapping sites               |
 | Active Patterns           | Matcher functions, prisms returning tagged unions or `T \| undefined` | Medium; manual ceremony                       |
 | Option                    | `T \| undefined` or `Option<T>` DU                                | High in practice                              |
 | Result                    | `Result<T, E>` tagged union or `neverthrow`/`Effect`             | High with discipline                          |
@@ -699,7 +705,7 @@ These prompts can be combined into a reusable header that you paste into LLM ses
 
 ### 12.2 Exhaustiveness
 
-> “All `switch` statements over tagged unions must be exhaustive. Add a `default` branch that uses `const _exhaustiveCheck: never = value satisfies never;` so that missing cases cause compile-time errors.”
+> “All `switch` statements over tagged unions must be exhaustive. Add a `default` branch like `default: { value satisfies never; throw new Error('unreachable'); }` so that missing cases cause compile-time errors.”
 
 ### 12.3 Domain safety and branded types
 
@@ -728,7 +734,7 @@ TypeScript is flexible enough to host most of F#'s core ideas. Encoding these pa
 
 ## Appendix A: External Libraries
 
-The libraries below are referenced in the main text. All are actively maintained as of early 2026.
+The libraries below are referenced in the main text. All are in common use as of early 2026; maintenance cadence varies by project, so check “Last publish” and repository activity before standardising on any dependency.
 
 ### Structural equality
 
@@ -740,8 +746,8 @@ Tiny, fast deep-equality function. Useful wherever TypeScript's reference equali
 **`neverthrow`** — [npmjs.com/package/neverthrow](https://www.npmjs.com/package/neverthrow)
 Provides `Result<T, E>` and `ResultAsync<T, E>` types with a fluent API for chaining operations without throwing. Lightweight and focused; ~1.3 million weekly downloads.
 
-**`Effect`** — [effect.website](https://effect.website) · [npmjs.com/package/effect](https://www.npmjs.com/package/effect)
-A comprehensive functional programming library for TypeScript, covering effects, concurrency, streaming, dependency injection, and more. The official successor to `fp-ts` (same author, Giulio Canti). Suitable for larger codebases that want a complete functional ecosystem.
+**`Effect`** — [effect.website](https://effect.website) · [Effect vs fp-ts](https://effect.website/docs/additional-resources/effect-vs-fp-ts/) · [npmjs.com/package/effect](https://www.npmjs.com/package/effect)
+A comprehensive functional programming library for TypeScript, covering effects, concurrency, streaming, dependency injection, and more. The Effect docs describe it as the successor to fp-ts v2 ("fp-ts v3") and note that fp-ts is officially merging into the Effect ecosystem. Suitable for larger codebases that want a complete functional ecosystem.
 
 ### Runtime validation and branded types
 
