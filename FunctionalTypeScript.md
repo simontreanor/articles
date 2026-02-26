@@ -735,8 +735,8 @@ This discourages anemic class patterns in favour of F#-like module design.
 |---------------------------|------------------------------------------------------------------|----------------------------------------------|
 | Discriminated Union       | Discriminated union with a `kind` discriminant                  | High; more boilerplate                        |
 | Exhaustive pattern match  | `switch` + `value satisfies never` (and `satisfies Record<...>` for total mappings) | High at usage and mapping sites               |
-| Active Patterns           | Matcher functions, prisms returning discriminated unions or `T \| undefined` | Medium; manual ceremony                       |
-| Option                    | `T \| undefined` or `Option<T>` DU                                | High in practice                              |
+| Active Patterns           | Matcher functions, prisms returning discriminated unions or `T | undefined` | Medium; manual ceremony                       |
+| Option                    | `T | undefined` or `Option<T>` DU                                | High in practice                              |
 | Result                    | `Result<T, E>` discriminated union or `neverthrow`/`Effect`      | High with discipline                          |
 | Records                   | `type`/`interface` + `readonly`                                 | High; no built-in structural equality         |
 | Units of Measure          | Branded types (`Brand<T, Tag>`)                                  | Medium; arithmetic & JSON require helpers     |
