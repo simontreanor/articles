@@ -499,6 +499,7 @@ Asking LLMs to produce matchers rather than deeply nested `if` chains produces m
 > “Don’t embed complex business logic directly in UI handlers or controllers. Instead, create ‘matcher’ functions that classify raw inputs into discriminated unions, then handle those via exhaustive `switch` with a `satisfies never` exhaustiveness check.”
 
 This separates *classification* from *handling*, much like active patterns.
+
 ***
 
 ## 8. Boolean Blindness and Type-Level Literals
