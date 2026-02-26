@@ -684,3 +684,58 @@ Wording can be adjusted to suit the model, but together these constraints steer 
 ***
 
 TypeScript is flexible enough to host most of F#'s core ideas. Encoding these patterns into LLM prompts means that flexibility works in your favour rather than against it.
+
+***
+
+## Appendix A: External Libraries
+
+The libraries below are referenced in the main text. All are actively maintained as of early 2026.
+
+### Structural equality
+
+**`fast-deep-equal`** — [npmjs.com/package/fast-deep-equal](https://www.npmjs.com/package/fast-deep-equal)
+Tiny, fast deep-equality function. Useful wherever TypeScript's reference equality (`===`) falls short for value comparisons on plain objects and arrays. No dependencies; ~111 million weekly downloads.
+
+### Result and error-handling
+
+**`neverthrow`** — [npmjs.com/package/neverthrow](https://www.npmjs.com/package/neverthrow)
+Provides `Result<T, E>` and `ResultAsync<T, E>` types with a fluent API for chaining operations without throwing. Lightweight and focused; ~1.3 million weekly downloads.
+
+**`Effect`** — [effect.website](https://effect.website) · [npmjs.com/package/effect](https://www.npmjs.com/package/effect)
+A comprehensive functional programming library for TypeScript, covering effects, concurrency, streaming, dependency injection, and more. The official successor to `fp-ts` (same author, Giulio Canti). Suitable for larger codebases that want a complete functional ecosystem.
+
+### Runtime validation and branded types
+
+**`Zod`** — [zod.dev](https://zod.dev) · [npmjs.com/package/zod](https://www.npmjs.com/package/zod)
+Schema declaration and runtime validation library. The standard choice for validating external data (API responses, form inputs, JSON) and branding the parsed output with a precise type. ~100 million weekly downloads.
+
+### Immutable data structures
+
+**`Immutable.js`** — [immutable-js.com](https://immutable-js.com) · [npmjs.com/package/immutable](https://www.npmjs.com/package/immutable)
+Persistent data structures (List, Map, Set, Record, etc.) with structural sharing. Values are immutable by construction, not just by TypeScript annotation, making accidental mutation impossible at runtime.
+
+**`Immer`** — [immerjs.github.io/immer](https://immerjs.github.io/immer) · [npmjs.com/package/immer](https://www.npmjs.com/package/immer)
+Copy-on-write updates via a `produce` function that accepts a mutable draft. The mutation is structural-shared under the hood, so callers get an immutable result without writing spread-heavy update code. ~30 million weekly downloads.
+
+***
+
+## Appendix B: The TC39 Pipeline Operator
+
+Section 5 mentions TC39's pipeline operator proposal as a potential future improvement to `pipe` helper ergonomics. Its progress is worth understanding before relying on it.
+
+### Current status
+
+The proposal is at **Stage 2** (of 4) and has been there for several years. The most recent substantive activity on the repository is from 2022–2023. Stage 2 means the committee considers the problem worth solving and the general design plausible, but it does not indicate imminent standardisation.
+
+### The Hack vs F# dispute
+
+Two flavours of the operator were proposed:
+
+- **F# pipes** (`value |> f |> g`) — the righthand side must be a unary function, making point-free style concise. TC39 rejected this design twice, citing memory-performance concerns from browser-engine implementors, `await` integration difficulties, and worries about encouraging a style that requires currying libraries to be practical.
+- **Hack pipes** (`value |> f(%) |> g(%)`) — the righthand side is any expression with a `%` placeholder. This is the surviving proposal. It is more verbose for unary function calls but works naturally with methods, arithmetic, `await`, and other expressions.
+
+### Practical implications
+
+Because F# pipes were rejected and Hack pipes are stalled at Stage 2, a hand-written `pipe` helper remains the practical approach for linearising function composition in TypeScript today. The helper pattern in §5.2 is fully type-safe, requires no build tooling beyond standard TypeScript, and will not change behaviour if or when a native operator eventually ships.
+
+If the proposal does advance, TypeScript would need to add support independently, and there would likely be a transitional period where both the helper and the operator coexist.
