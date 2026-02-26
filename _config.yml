@@ -1,5 +1,5 @@
 remote_theme: jekyll/minima
 minima:
-  skin: dark
+  skin: auto
 plugins:
 - jekyll-remote-theme
