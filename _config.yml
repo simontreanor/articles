@@ -1,3 +1,5 @@
-remote_theme: lewismiddleton/cayman-dark
+remote_theme: jekyll/minima
+minima:
+  skin: dark
 plugins:
 - jekyll-remote-theme
