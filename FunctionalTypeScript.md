@@ -47,6 +47,7 @@ For LLMs, you want to be explicit in your prompts:
 > “Model domain states as discriminated unions with a string `kind` discriminant instead of using booleans, nullable properties, or loosely shaped objects.”
 
 Even this one constraint significantly shapes the output style.
+
 ***
 
 ## 2. Exhaustive Pattern Matching (`never` + `satisfies`)
@@ -113,6 +114,7 @@ Encode this in your prompts:
 > “For mappings over union keys, define objects that `satisfies Record<Union, T>` to guarantee all keys are covered.”
 
 Both together give TypeScript something close to F#'s match experience.
+
 ***
 
 ## 3. Immutability, Records, and Structural Equality
@@ -251,6 +253,7 @@ Callers must inspect `ok`, mirroring F#'s `Result`. Libraries like `neverthrow` 
 > “Avoid `null`; prefer `undefined` in `T | undefined` unions or explicit `Option`/`Result` types.”
 
 Both patterns bring TS closer to F#'s explicit failure semantics.
+
 ***
 
 ## 5. Pipelines, Currying, and Composition
@@ -341,6 +344,7 @@ Preferring curried arrow functions eliminates those wrappers and keeps pipeline 
 ### 5.4 LLM guidance
 
 > "Prefer curried arrow functions for any function that will be partially applied or used as a pipeline step: `const f = (a: A) => (b: B) => ...` rather than `(a: A, b: B) => ...`."
+
 ***
 
 ## 6. Units of Measure and Branded Types
@@ -414,6 +418,7 @@ You cannot accidentally swap the arguments without a compile error.
 > “Define branded (nominal) types for all domain identifiers (e.g. `UserId`, `OrderId`) and measurements. Functions that operate on those values must use the branded types so they cannot be confused.”
 
 The result is F#-like domain safety at the type level.
+
 ***
 
 ## 7. Active Patterns, Matchers, and Prisms
@@ -601,6 +606,7 @@ After calling `assertIsPositive(value)`, the compiler treats `value` as `Positiv
 > “Use template literal types for domain-specific string formats: e.g. `ID_${string}`, `${number}px`, etc.”
 
 Both rules reduce boolean blindness and push toward F#'s DU-heavy style.
+
 ***
 
 ## 9. Lists, Arrays, and Persistent Data Structures
@@ -637,6 +643,7 @@ The illusion of immutability through spreads has a cost: `[newItem, ...oldArray]
 > “Use `ReadonlyArray<T>` and avoid mutating arrays in place (`push`, `splice`, `sort` in place). Use non-mutating methods (e.g. `map`, `filter`) or return new arrays.”
 
 This preserves the functional, data-in/data-out character of F#'s list processing.
+
 ***
 
 ## 10. Modules vs Companion Objects and File Modules
@@ -716,6 +723,7 @@ F# uses `.fsi` signature files; TypeScript uses `export` and “barrel” files:
 > “Organise the code using a module-per-domain-type approach. For each domain entity, create a file defining the `type` and a `const` with the same name that contains pure functions. Do not use classes.”
 
 This discourages anemic class patterns in favour of F#-like module design.
+
 ***
 
 ## 11. Consolidated Mapping: F# Features to TypeScript Patterns
@@ -771,6 +779,7 @@ These prompts can be combined into a reusable header that you paste into LLM ses
 
 > "Prefer curried arrow functions for any function that will be partially applied or used as a pipeline step: `const f = (a: A) => (b: B) => ...` rather than `(a: A, b: B) => ...`. Use a `pipe` helper to compose sequences of such functions left to right."
 Wording can be adjusted to suit the model, but together these constraints steer generated TypeScript toward a more functional, F#-inspired style.
+
 ***
 
 TypeScript is flexible enough to host most of F#'s core ideas. Encoding these patterns into LLM prompts means that flexibility works in your favour rather than against it.
