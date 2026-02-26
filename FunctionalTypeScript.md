@@ -1,5 +1,7 @@
 # The Functional Blueprint: Teaching TypeScript to Speak F#
 
+*Simon Treanor, 26 February 2026*
+
 TypeScript has become the lingua franca of LLMs: ask a modern AI assistant to write backend services, frontend components, or shared domain models and it will almost certainly default to TypeScript-like code. The *style* of TypeScript the model chooses, however, has a significant impact on safety and maintainability.
 If you come from an F# background, you already know a different way to write programs. F# emphasises immutable data, discriminated unions, exhaustive pattern matching, domain-driven modelling, and clear separation between pure logic and side effects, with the result that many classes of bugs are simply impossible to represent at the type level.
 This article is a blueprint for bending TypeScript in that direction, using concrete patterns that can be encoded into LLM prompts and into your codebase. Each section covers a core F# idea and shows:
