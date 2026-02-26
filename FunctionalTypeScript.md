@@ -491,8 +491,10 @@ In functional optics:
 
 - A **Lens** focuses on a part that **always exists** (e.g. `User.name`).
 - A **Prism** focuses on a part that **might exist**, often inside a union (e.g. the `Circle` inside `Shape`).
+
 Matcher functions are hand-built prisms: given arbitrary input, return either `{ type: "Email"; ... }` or `{ type: "Unknown" }`.
 Asking LLMs to produce matchers rather than deeply nested `if` chains produces more F#-like structure.
+
 ### 7.5 Prompting for classification-first design
 > “Don’t embed complex business logic directly in UI handlers or controllers. Instead, create ‘matcher’ functions that classify raw inputs into discriminated unions, then handle those via exhaustive `switch` with a `satisfies never` exhaustiveness check.”
 
@@ -655,6 +657,7 @@ module User =
 In modern TypeScript, the primary unit of modularity is the ES module (file). To mimic F# modules, define:
 - A `type` for the data.
 - A `const` (companion object) with the same name containing pure functions.
+
 ```ts
 // User.ts
 
