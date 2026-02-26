@@ -9,7 +9,7 @@ This article is a blueprint for bending TypeScript in that direction, using conc
 
 ***
 
-## 1. Discriminated Unions and Tagged Unions
+## 1. Discriminated Unions
 
 In F#, discriminated unions (DUs) are the primary way to model domain states explicitly, rather than relying on booleans, flags, or "nullable" fields.
 ### 1.1 F# discriminated unions
@@ -21,25 +21,25 @@ type Shape =
 ```
 
 A `Shape` is either a `Circle` with a `radius`, or a `Rectangle` with `width` and `height`. Nothing else is allowed; the type is **closed**.
-### 1.2 TypeScript tagged unions
+### 1.2 TypeScript discriminated unions
 
-TypeScript can emulate this with tagged unions (more commonly called *discriminated unions* in the TypeScript handbook).
+TypeScript can emulate this with discriminated unions.
 ```ts
 type Shape =
   | { kind: "circle";    radius: number }
   | { kind: "rectangle"; width: number; height: number };
 ```
 
-The `kind` field is the **discriminator**. It lets the compiler narrow within a `switch` or `if` chain.
+The `kind` field is the **discriminant property**. It lets the compiler narrow within a `switch` or `if` chain.
 #### Boilerplate and gaps
 
 Compared to F#, there is more boilerplate:
 
-- You must choose and repeat a tag field (`kind`, `type`, etc.).
+- You must choose and repeat a discriminant property (`kind`, `type`, etc.).
 - Adding a new case means changing the union declaration plus all `switch`es that depend on it.
 For LLMs, you want to be explicit in your prompts:
 
-> “Model domain states as tagged unions with a string `kind` discriminator instead of using booleans, nullable properties, or loosely shaped objects.”
+> “Model domain states as discriminated unions with a string `kind` discriminant instead of using booleans, nullable properties, or loosely shaped objects.”
 
 Even this one constraint significantly shapes the output style.
 ***
@@ -98,7 +98,7 @@ This is the **definition-site** check: the object must cover all keys in the uni
 
 Encode this in your prompts:
 
-> "For every `switch` on a tagged union, add a `default` case like `default: { value satisfies never; throw new Error('unreachable'); }` so that missing cases become compile-time errors."
+> "For every `switch` on a discriminated union, add a `default` case like `default: { value satisfies never; throw new Error('unreachable'); }` so that missing cases become compile-time errors."
 
 > “For mappings over union keys, define objects that `satisfies Record<Union, T>` to guarantee all keys are covered.”
 
@@ -211,7 +211,7 @@ type Option<T> = { kind: "some"; value: T } | { kind: "none" };
 …but in practice, `T | undefined` often wins on ergonomics.
 ### 4.3 TypeScript `Result` emulation
 
-A tagged union is a natural fit:
+A discriminated union is a natural fit:
 
 ```ts
 type Result<T, E> =
@@ -228,7 +228,7 @@ function divideSafe(x: number, y: number): Result<number, "DivideByZero"> {
 Callers must inspect `ok`, mirroring F#'s `Result`. Libraries like `neverthrow` and `Effect` provide richer ecosystems around this idea.
 ### 4.4 LLM guidance
 
-> “Do not throw exceptions for domain-level failures. Instead, return a `Result<T, E>` tagged union.”
+> “Do not throw exceptions for domain-level failures. Instead, return a `Result<T, E>` discriminated union.”
 
 > “Avoid `null`; prefer `undefined` in `T | undefined` unions or explicit `Option`/`Result` types.”
 
@@ -413,7 +413,7 @@ let describe input =
 The pattern both **classifies** and **transforms** the data.
 ### 7.2 TypeScript “matcher function” pattern
 
-TypeScript doesn’t have syntax to transform during the `switch` head, so you do it just before, via a matcher function that returns a tagged union.
+TypeScript doesn’t have syntax to transform during the `switch` head, so you do it just before, via a matcher function that returns a discriminated union.
 ```ts
 type ContactMethod =
   | { type: "Email";   address: string }
@@ -468,7 +468,7 @@ In functional optics:
 Matcher functions are hand-built prisms: given arbitrary input, return either `{ type: "Email"; ... }` or `{ type: "Unknown" }`.
 Asking LLMs to produce matchers rather than deeply nested `if` chains produces more F#-like structure.
 ### 7.5 Prompting for classification-first design
-> “Don’t embed complex business logic directly in UI handlers or controllers. Instead, create ‘matcher’ functions that classify raw inputs into tagged unions, then handle those via exhaustive `switch` with a `satisfies never` exhaustiveness check.”
+> “Don’t embed complex business logic directly in UI handlers or controllers. Instead, create ‘matcher’ functions that classify raw inputs into discriminated unions, then handle those via exhaustive `switch` with a `satisfies never` exhaustiveness check.”
 
 This separates *classification* from *handling*, much like active patterns.
 ***
@@ -560,7 +560,7 @@ function assertIsPositive(n: number): asserts n is PositiveNumber {
 After calling `assertIsPositive(value)`, the compiler treats `value` as `PositiveNumber` inside that scope.
 ### 8.5 Prompting away from booleans
 
-> “Avoid returning `boolean` for domain decisions. Return a union of literal types or a tagged union that encodes the *reason* for the outcome.”
+> “Avoid returning `boolean` for domain decisions. Return a union of literal types or a discriminated union that encodes the *reason* for the outcome.”
 
 > “Use template literal types for domain-specific string formats: e.g. `ID_${string}`, `${number}px`, etc.”
 
@@ -678,11 +678,11 @@ This discourages anemic class patterns in favour of F#-like module design.
 
 | F# feature                 | TypeScript “functional” equivalent                              | Parity level / notes                         |
 |---------------------------|------------------------------------------------------------------|----------------------------------------------|
-| Discriminated Union       | Tagged union with `kind` discriminator                          | High; more boilerplate                        |
+| Discriminated Union       | Discriminated union with a `kind` discriminant                  | High; more boilerplate                        |
 | Exhaustive pattern match  | `switch` + `value satisfies never` (and `satisfies Record<...>` for total mappings) | High at usage and mapping sites               |
-| Active Patterns           | Matcher functions, prisms returning tagged unions or `T \| undefined` | Medium; manual ceremony                       |
+| Active Patterns           | Matcher functions, prisms returning discriminated unions or `T \| undefined` | Medium; manual ceremony                       |
 | Option                    | `T \| undefined` or `Option<T>` DU                                | High in practice                              |
-| Result                    | `Result<T, E>` tagged union or `neverthrow`/`Effect`             | High with discipline                          |
+| Result                    | `Result<T, E>` discriminated union or `neverthrow`/`Effect`      | High with discipline                          |
 | Records                   | `type`/`interface` + `readonly`                                 | High; no built-in structural equality         |
 | Units of Measure          | Branded types (`Brand<T, Tag>`)                                  | Medium; arithmetic & JSON require helpers     |
 | Lists (linked)           | `ReadonlyArray<T>` or persistent data structures library         | Low–medium; semantics differ                  |
@@ -701,11 +701,11 @@ These prompts can be combined into a reusable header that you paste into LLM ses
 
 ### 12.1 Structural modelling
 
-> “Model domain data with tagged unions and immutable records: define `type` aliases with a string `kind` discriminator and `readonly` fields. Use `ReadonlyArray<T>` for collections.”
+> “Model domain data with discriminated unions and immutable records: define `type` aliases with a string `kind` discriminant and `readonly` fields. Use `ReadonlyArray<T>` for collections.”
 
 ### 12.2 Exhaustiveness
 
-> “All `switch` statements over tagged unions must be exhaustive. Add a `default` branch like `default: { value satisfies never; throw new Error('unreachable'); }` so that missing cases cause compile-time errors.”
+> “All `switch` statements over discriminated unions must be exhaustive. Add a `default` branch like `default: { value satisfies never; throw new Error('unreachable'); }` so that missing cases cause compile-time errors.”
 
 ### 12.3 Domain safety and branded types
 
@@ -713,11 +713,11 @@ These prompts can be combined into a reusable header that you paste into LLM ses
 
 ### 12.4 Error handling and options
 
-> “Avoid `null` and throwing for normal domain errors. Use union types with `undefined` (`T | undefined`) for optional values and a `Result<T, E>` tagged union for operations that can fail.”
+> “Avoid `null` and throwing for normal domain errors. Use union types with `undefined` (`T | undefined`) for optional values and a `Result<T, E>` discriminated union for operations that can fail.”
 
 ### 12.5 Logic structure and active patterns
 
-> “Separate classification from handling: create matcher functions that transform raw inputs into tagged unions (like F# active patterns), and then handle them via exhaustive `switch` statements.”
+> “Separate classification from handling: create matcher functions that transform raw inputs into discriminated unions (like F# active patterns), and then handle them via exhaustive `switch` statements.”
 
 ### 12.6 Organisation and style
 
