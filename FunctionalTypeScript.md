@@ -30,8 +30,8 @@ A `Shape` is either a `Circle` with a `radius`, or a `Rectangle` with `width` an
 TypeScript can emulate this with discriminated unions.
 ```ts
 type Shape =
-  | { kind: "circle";    radius: number }
-  | { kind: "rectangle"; width: number; height: number };
+  | { kind: "circle",    radius: number }
+  | { kind: "rectangle", width: number, height: number }
 ```
 
 The `kind` field is the **discriminant property**. It lets the compiler narrow within a `switch` or `if` chain.
@@ -72,11 +72,11 @@ TypeScript's `switch` doesn't enforce exhaustiveness by default, but you can for
 function getArea(shape: Shape): number {
   switch (shape.kind) {
     case "circle":
-      return Math.PI * shape.radius ** 2;
+      return Math.PI * shape.radius ** 2
     case "rectangle":
-      return shape.width * shape.height;
+      return shape.width * shape.height
     default: {
-      throw new Error(`Unhandled shape: ${shape satisfies never}`);
+      throw new Error(`Unhandled shape: ${shape satisfies never}`)
     }
   }
 }
@@ -89,13 +89,13 @@ This is the **consumption-site** exhaustiveness check.
 
 You can also enforce exhaustiveness where you define “total mappings”—for example, mapping each colour to a hex code.
 ```ts
-type Color = "red" | "green" | "blue";
+type Color = "red" | "green" | "blue"
 
 const ColorHex = {
   red:   "#f00",
   green: "#0f0",
   blue:  "#00f",
-} satisfies Record<Color, string>; // Errors if any Color is missing
+} satisfies Record<Color, string> // Errors if any Color is missing
 ```
 
 Here, `satisfies Record<Color, string>` ensures:
@@ -138,13 +138,13 @@ TypeScript emulates records with object types and the `readonly` modifier:
 
 ```ts
 type Person = {
-  readonly name: string;
-  readonly age:  number;
-};
+  readonly name: string
+  readonly age:  number
+}
 
-const p1: Person = { name: "Alice", age: 30 };
+const p1: Person = { name: "Alice", age: 30 }
 
-// p1.age = 31; // Error: Cannot assign to 'age' because it is a read-only property
+// p1.age = 31 // Error: Cannot assign to 'age' because it is a read-only property
 ```
 
 For collections, use `ReadonlyArray<T>` or `readonly T[]`:
@@ -152,7 +152,7 @@ For collections, use `ReadonlyArray<T>` or `readonly T[]`:
 ```ts
 const people: ReadonlyArray<Person> = [
   { name: "Alice", age: 30 },
-];
+]
 ```
 
 ### 3.3 Structural equality gap
@@ -170,7 +170,7 @@ let older = { p1 with Age = p1.Age + 1 }
 In TypeScript, object spread is close:
 
 ```ts
-const older: Person = { ...p1, age: p1.age + 1 };
+const older: Person = { ...p1, age: p1.age + 1 }
 ```
 
 This is more verbose but conceptually similar.
@@ -210,20 +210,20 @@ TypeScript relies on unions and strict null checking:
 
 ```ts
 function divide(x: number, y: number): number | undefined {
-  return y === 0 ? undefined : x / y;
+  return y === 0 ? undefined : x / y
 }
 ```
 
 You can then use optional chaining and nullish coalescing:
 
 ```ts
-const result = divide(10, 2) ?? 0;
+const result = divide(10, 2) ?? 0
 ```
 
 For a more F#-like `Option`, you can define:
 
 ```ts
-type Option<T> = { kind: "some"; value: T } | { kind: "none" };
+type Option<T> = { kind: "some", value: T } | { kind: "none" }
 ```
 
 …but in practice, `T | undefined` often wins on ergonomics.
@@ -234,13 +234,13 @@ A discriminated union is a natural fit:
 
 ```ts
 type Result<T, E> =
-  | { ok: true;  value: T }
-  | { ok: false; error: E };
+  | { ok: true,  value: T }
+  | { ok: false, error: E }
 
 function divideSafe(x: number, y: number): Result<number, "DivideByZero"> {
   return y === 0
     ? { ok: false, error: "DivideByZero" }
-    : { ok: true,  value: x / y };
+    : { ok: true,  value: x / y }
 }
 ```
 
@@ -278,30 +278,30 @@ Where `pipe` earns its keep is composing standalone domain functions that have n
 
 ```ts
 // Reads right to left — hard to follow
-const label = formatCurrency(applyVat(applyDiscount(0.1)(basePrice)));
+const label = formatCurrency(applyVat(applyDiscount(0.1)(basePrice)))
 ```
 
 A `pipe` helper restores execution order:
 
 ```ts
-type Unary<A, B> = (a: A) => B;
+type Unary<A, B> = (a: A) => B
 
-function pipe<A, B>(a: A, ab: Unary<A, B>): B;
-function pipe<A, B, C>(a: A, ab: Unary<A, B>, bc: Unary<B, C>): C;
-function pipe<A, B, C, D>(a: A, ab: Unary<A, B>, bc: Unary<B, C>, cd: Unary<C, D>): D;
+function pipe<A, B>(a: A, ab: Unary<A, B>): B
+function pipe<A, B, C>(a: A, ab: Unary<A, B>, bc: Unary<B, C>): C
+function pipe<A, B, C, D>(a: A, ab: Unary<A, B>, bc: Unary<B, C>, cd: Unary<C, D>): D
 // …more overloads…
 function pipe(a: unknown, ...fns: Unary<any, any>[]): unknown {
-  return fns.reduce((v, f) => f(v), a);
+  return fns.reduce((v, f) => f(v), a)
 }
 
-const basePrice = 100;
+const basePrice = 100
 
-const applyDiscount  = (pct: number) => (amount: number) => amount * (1 - pct);
-const applyVat       = (amount: number) => amount * 1.2;
-const formatCurrency = (amount: number) => `£${amount.toFixed(2)}`;
+const applyDiscount  = (pct: number) => (amount: number) => amount * (1 - pct)
+const applyVat       = (amount: number) => amount * 1.2
+const formatCurrency = (amount: number) => `£${amount.toFixed(2)}`
 
 // Reads left to right — steps in execution order
-const label = pipe(basePrice, applyDiscount(0.1), applyVat, formatCurrency);
+const label = pipe(basePrice, applyDiscount(0.1), applyVat, formatCurrency)
 ```
 
 TC39's pipeline proposal may eventually reduce the need for this, but for now, a standard `pipe` helper is a good pattern to encourage from LLMs.
@@ -321,11 +321,11 @@ TypeScript has no automatic currying, but the same effect is straightforward usi
 
 ```ts
 // Two-argument form — cannot partially apply
-const multiply = (x: number, y: number) => x * y;
+const multiply = (x: number, y: number) => x * y
 
 // Curried form — first call fixes x, second call provides y
-const multiplyC = (x: number) => (y: number) => x * y;
-const double = multiplyC(2); // (y: number) => number
+const multiplyC = (x: number) => (y: number) => x * y
+const double = multiplyC(2) // (y: number) => number
 ```
 
 This matters for `pipe`, which expects unary functions at every step. The `applyDiscount(0.1)` call in §5.2 works precisely because `applyDiscount` is curried: calling it with one argument returns the unary function that `pipe` then applies to `basePrice`.
@@ -333,10 +333,10 @@ This matters for `pipe`, which expects unary functions at every step. The `apply
 A non-curried helper would need wrapping:
 
 ```ts
-const applyDiscountFlat = (pct: number, amount: number) => amount * (1 - pct);
+const applyDiscountFlat = (pct: number, amount: number) => amount * (1 - pct)
 
 // Must wrap to make it unary
-const label = pipe(basePrice, x => applyDiscountFlat(0.1, x), applyVat, formatCurrency);
+const label = pipe(basePrice, x => applyDiscountFlat(0.1, x), applyVat, formatCurrency)
 ```
 
 Preferring curried arrow functions eliminates those wrappers and keeps pipeline steps visually clean.
@@ -367,27 +367,27 @@ let distanceInFeet   : float<ft> = 32.8<ft>
 
 In TypeScript’s structural system, `number` is `number`. To distinguish metres from feet, you “brand” them.
 ```ts
-type Meters = number & { readonly __brand: "Meters" };
-type Feet   = number & { readonly __brand: "Feet" };
+type Meters = number & { readonly __brand: "Meters" }
+type Feet   = number & { readonly __brand: "Feet" }
 
-const Meters = (n: number): Meters => n as Meters;
-const Feet   = (n: number): Feet   => n as Feet;
+const Meters = (n: number): Meters => n as Meters
+const Feet   = (n: number): Feet   => n as Feet
 
-const dMeters = Meters(10);
-const dFeet   = Feet(32.8);
+const dMeters = Meters(10)
+const dFeet   = Feet(32.8)
 
-// let total: Meters = dMeters + dFeet; // Type error: 'number' is not assignable to type 'Meters'
+// let total: Meters = dMeters + dFeet // Type error: 'number' is not assignable to type 'Meters'
 ```
 
 You can generalise this using `unique symbol` for extra safety:
 
 ```ts
-declare const __brand: unique symbol;
+declare const __brand: unique symbol
 
-type Brand<T, TBrand> = T & { [__brand]: TBrand };
+type Brand<T, TBrand> = T & { [__brand]: TBrand }
 
-type UserId  = Brand<string, "UserId">;
-type OrderId = Brand<string, "OrderId">;
+type UserId  = Brand<string, "UserId">
+type OrderId = Brand<string, "OrderId">
 ```
 
 ### 6.3 Why this matters (the “ID soup” problem)
@@ -400,8 +400,8 @@ function updateUser(id: string, orgId: string) { /* ... */ }
 
 This is “ID soup”: any `string` can go anywhere. With branded types:
 ```ts
-type UserId = Brand<string, "UserId">;
-type OrgId  = Brand<string, "OrgId">;
+type UserId = Brand<string, "UserId">
+type OrgId  = Brand<string, "OrgId">
 
 function updateUser(id: UserId, orgId: OrgId) { /* ... */ }
 ```
@@ -448,29 +448,29 @@ The pattern both **classifies** and **transforms** the data.
 TypeScript doesn’t have syntax to transform during the `switch` head, so you do it just before, via a matcher function that returns a discriminated union.
 ```ts
 type ContactMethod =
-  | { type: "Email";   address: string }
-  | { type: "Phone";   number:  string }
-  | { type: "Unknown" };
+  | { type: "Email",   address: string }
+  | { type: "Phone",   number:  string }
+  | { type: "Unknown" }
 
 const asContactMethod = (input: string): ContactMethod => {
-  if (input.includes("@"))       return { type: "Email",   address: input };
-  if (/^\d+$/.test(input))       return { type: "Phone",   number:  input };
-  return { type: "Unknown" };
-};
+  if (input.includes("@"))       return { type: "Email",   address: input }
+  if (/^\d+$/.test(input))       return { type: "Phone",   number:  input }
+  return { type: "Unknown" }
+}
 
-const method = asContactMethod("test@example.com");
+const method = asContactMethod("test@example.com")
 
 switch (method.type) {
   case "Email":
-    console.log(method.address);
-    break;
+    console.log(method.address)
+    break
   case "Phone":
-    console.log(method.number);
-    break;
+    console.log(method.number)
+    break
   case "Unknown":
-    break;
+    break
   default: {
-    throw new Error(`Unhandled ContactMethod: ${method satisfies never}`);
+    throw new Error(`Unhandled ContactMethod: ${method satisfies never}`)
   }
 }
 ```
@@ -483,11 +483,11 @@ Partial active patterns—`(|Integer|_|)`—either match or they don’t. In TS,
 
 ```ts
 const asInteger = (value: string): number | undefined => {
-  const parsed = parseInt(value, 10);
-  return Number.isNaN(parsed) ? undefined : parsed;
-};
+  const parsed = parseInt(value, 10)
+  return Number.isNaN(parsed) ? undefined : parsed
+}
 
-const n = asInteger("42") ?? 0;
+const n = asInteger("42") ?? 0
 ```
 
 This pairs nicely with nullish coalescing and avoids boolean blindness.
@@ -518,7 +518,7 @@ Boolean blindness is what happens when a `boolean` returns from a function but t
 ```ts
 function canAccess(user: User): boolean {
   // complex rules...
-  return user.role === "admin" || user.isSubscriber;
+  return user.role === "admin" || user.isSubscriber
 }
 
 if (canAccess(user)) {
@@ -534,15 +534,15 @@ Instead, return a discriminated union:
 
 ```ts
 type Access =
-  | { kind: "Allowed";   reason: "Admin" | "Subscriber" }
-  | { kind: "Denied";    reason: "Unauthorized" | "Expired" };
+  | { kind: "Allowed",   reason: "Admin" | "Subscriber" }
+  | { kind: "Denied",    reason: "Unauthorized" | "Expired" }
 
 function canAccess(user: User): Access {
   if (user.role === "admin")
-    return { kind: "Allowed", reason: "Admin" };
+    return { kind: "Allowed", reason: "Admin" }
   if (user.isSubscriber)
-    return { kind: "Allowed", reason: "Subscriber" };
-  return { kind: "Denied", reason: "Unauthorized" };
+    return { kind: "Allowed", reason: "Subscriber" }
+  return { kind: "Denied", reason: "Unauthorized" }
 }
 ```
 
@@ -552,24 +552,24 @@ The caller can then distinguish why access was allowed or denied.
 
 Template literal types let you encode information into string shapes.
 ```ts
-type Px      = `${number}px`;
-type Percent = `${number}%`;
-type Length  = Px | Percent;
+type Px      = `${number}px`
+type Percent = `${number}%`
+type Length  = Px | Percent
 
 function setWidth(value: Length) {
   // `value` is guaranteed to be "Npx" or "N%"
 }
 
-// setWidth("100");   // Error
-setWidth("100px");   // OK
-setWidth("50%");     // OK
+// setWidth("100")   // Error
+setWidth("100px")   // OK
+setWidth("50%")     // OK
 ```
 
 This is similar in spirit to parameterised active patterns like `Range(1, 10)`—you constrain shape at the type level before runtime.
 You can also encode parameterised checks:
 
 ```ts
-type MultipleOf<N extends number> = `MultipleOf_${N}`;
+type MultipleOf<N extends number> = `MultipleOf_${N}`
 
 function checkFactor<N extends number>(
   n: number,
@@ -577,7 +577,7 @@ function checkFactor<N extends number>(
 ): MultipleOf<N> | "NoMatch" {
   return n % factor === 0
     ? (`MultipleOf_${factor}` as MultipleOf<N>)
-    : "NoMatch";
+    : "NoMatch"
 }
 ```
 
@@ -588,11 +588,11 @@ The result type carries the factor it matched against.
 Where type-level encodings become unwieldy, assertion functions are the TS analogue of pattern-based narrowing:
 
 ```ts
-type PositiveNumber = Brand<number, "PositiveNumber">;
+type PositiveNumber = Brand<number, "PositiveNumber">
 
 function assertIsPositive(n: number): asserts n is PositiveNumber {
   if (n <= 0) {
-    throw new Error("Not positive");
+    throw new Error("Not positive")
   }
 }
 ```
@@ -626,10 +626,10 @@ F# also has arrays and other structures, but lists are idiomatic for many recurs
 
 TypeScript’s default `T[]` is mutable. To approximate F# lists, use `ReadonlyArray<T>`:
 ```ts
-const xs: ReadonlyArray<number> = [1, 2, 3];
+const xs: ReadonlyArray<number> = [1, 2, 3]
 
-// xs.push(4); // Error: Property 'push' does not exist on type 'readonly number[]'
-const ys = [0, ...xs]; // creates a new array
+// xs.push(4) // Error: Property 'push' does not exist on type 'readonly number[]'
+const ys = [0, ...xs] // creates a new array
 ```
 
 ### 9.3 Performance implications
@@ -672,19 +672,19 @@ In modern TypeScript, the primary unit of modularity is the ES module (file). To
 // User.ts
 
 export type User = {
-  readonly id:   UserId;
-  readonly name: string;
-};
+  readonly id:   UserId
+  readonly name: string
+}
 
 export const User = {
   create(id: UserId, name: string): User {
-    return { id, name };
+    return { id, name }
   },
 
   validate(user: User): boolean {
-    return user.name.length > 0;
+    return user.name.length > 0
   },
-};
+}
 ```
 
 Note on imports: exporting a `type User` and a `const User` from the same module is legal (types and values live in different namespaces), but when importing from another file you may want `import type { User } from "./User";` alongside `import { User } from "./User";` depending on whether you need the type, the value, or both.
@@ -692,7 +692,7 @@ Note on imports: exporting a `type User` and a `const User` from the same module
 Usage:
 
 ```ts
-const user = User.create(userId, "alice");
+const user = User.create(userId, "alice")
 if (User.validate(user)) { /* ... */ }
 ```
 
@@ -704,8 +704,8 @@ TypeScript also has `namespace`:
 
 ```ts
 namespace User {
-  export type T = { /* ... */ };
-  export const create = /* ... */;
+  export type T = { /* ... */ }
+  export const create = /* ... */
 }
 ```
 
