@@ -228,7 +228,7 @@ function divideSafe(x: number, y: number): Result<number, "DivideByZero"> {
 }
 ```
 
-Callers must inspect `ok`, mirroring F#’s `Result`. Libraries like `neverthrow` and `fp-ts` provide richer ecosystems around this idea.
+Callers must inspect `ok`, mirroring F#'s `Result`. Libraries like `neverthrow` and `Effect` (the successor to `fp-ts`) provide richer ecosystems around this idea.
 ### 4.4 LLM guidance
 
 > “Do not throw exceptions for domain-level failures. Instead, return a `Result<T, E>` tagged union.”
@@ -347,7 +347,7 @@ function updateUser(id: UserId, orgId: OrgId) { /* ... */ }
 You cannot accidentally swap the arguments without a compile error.
 ### 6.4 Arithmetic and JSON gaps
 
-- Arithmetic on brands tends to “forget” the brand (because the compiler sees `number` operations), so you may need domain-specific helpers or re-branding.- When deserialising JSON, brands don’t exist at runtime; you must re-validate and brand at the boundary (e.g. using Zod or io-ts).
+- Arithmetic on brands tends to “forget” the brand (because the compiler sees `number` operations), so you may need domain-specific helpers or re-branding.- When deserialising JSON, brands don’t exist at runtime; you must re-validate and brand at the boundary (e.g. using Zod).
 ### 6.5 Prompting for branded types
 
 > “Define branded (nominal) types for all domain identifiers (e.g. `UserId`, `OrderId`) and measurements. Functions that operate on those values must use the branded types so they cannot be confused.”
@@ -554,7 +554,7 @@ const ys = [0, ...xs]; // creates a new array
 
 The illusion of immutability through spreads has a cost: `[newItem, ...oldArray]` copies the entire array. For small lists (UI-level code) this is usually fine; for high-throughput data processing, consider:
 - Structuring transforms as pipelines without excessive copying.
-- Using libraries providing persistent data structures (e.g. Immutable.js, Mori, Immer in “copy-on-write” style).
+- Using libraries providing persistent data structures (e.g. Immutable.js, Immer in "copy-on-write" style).
 ### 9.4 Prompting for immutable collections
 
 > “Use `ReadonlyArray<T>` and avoid mutating arrays in place (`push`, `splice`, `sort` in place). Use non-mutating methods (e.g. `map`, `filter`) or return new arrays.”
@@ -642,7 +642,7 @@ This discourages anemic class patterns in favour of F#-like module design.
 | Exhaustive pattern match  | `switch` + `satisfies never`                                     | High at usage and mapping sites               |
 | Active Patterns           | Matcher functions, prisms returning tagged unions or `T \| undefined` | Medium; manual ceremony                       |
 | Option                    | `T \| undefined` or `Option<T>` DU                                | High in practice                              |
-| Result                    | `Result<T, E>` tagged union or `neverthrow`/`fp-ts`              | High with discipline                          |
+| Result                    | `Result<T, E>` tagged union or `neverthrow`/`Effect`             | High with discipline                          |
 | Records                   | `type`/`interface` + `readonly`                                 | High; no built-in structural equality         |
 | Units of Measure          | Branded types (`Brand<T, Tag>`)                                  | Medium; arithmetic & JSON require helpers     |
 | Lists (linked)           | `ReadonlyArray<T>` or persistent data structures library         | Low–medium; semantics differ                  |
