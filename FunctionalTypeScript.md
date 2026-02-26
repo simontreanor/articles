@@ -1,8 +1,8 @@
 # The Functional Blueprint: Teaching TypeScript to Speak F#
 
-TypeScript has quietly become the **lingua** franca of LLMs: if you ask a modern AI assistant to write backend services, frontend components, or shared domain models, chances are it will default to TypeScript-like code. That’s powerful—but also dangerous—because the *style* of TypeScript the model chooses has a huge impact on safety and maintainability.
-If you come from an F# background, you already know a different way to write programs. F# emphasises immutable data, discriminated unions, exhaustive pattern matching, domain-driven modelling, and clear separation between pure logic and side effects. The resulting systems tend to be “correct by construction”: many classes of bugs are simply impossible to represent at the type level.
-This article is a blueprint for bending TypeScript in that direction—**not** by wishful thinking, but by concrete patterns you can encode into LLM prompts and into your codebase. We’ll walk feature-by-feature through core F# ideas and show:
+TypeScript has become the lingua franca of LLMs: ask a modern AI assistant to write backend services, frontend components, or shared domain models and it will almost certainly default to TypeScript-like code. The *style* of TypeScript the model chooses, however, has a significant impact on safety and maintainability.
+If you come from an F# background, you already know a different way to write programs. F# emphasises immutable data, discriminated unions, exhaustive pattern matching, domain-driven modelling, and clear separation between pure logic and side effects, with the result that many classes of bugs are simply impossible to represent at the type level.
+This article is a blueprint for bending TypeScript in that direction, using concrete patterns that can be encoded into LLM prompts and into your codebase. Each section covers a core F# idea and shows:
 - How to emulate them in TypeScript.
 - Where parity is strong and where it breaks down.
 - How to guide LLMs so they *consistently* use those patterns.
@@ -11,7 +11,7 @@ This article is a blueprint for bending TypeScript in that direction—**not** b
 
 ## 1. Discriminated Unions and Tagged Unions
 
-In F#, discriminated unions (DUs) are the backbone of modelling: you represent domain states explicitly, not as booleans, flags, or “nullable” fields.
+In F#, discriminated unions (DUs) are the primary way to model domain states explicitly, rather than relying on booleans, flags, or "nullable" fields.
 ### 1.1 F# discriminated unions
 
 ```fsharp
@@ -20,7 +20,7 @@ type Shape =
     | Rectangle of width: float * height: float
 ```
 
-This says: a `Shape` is **either** a `Circle` with a `radius`, or a `Rectangle` with `width` and `height`. Nothing else is allowed; the type is **closed**.
+A `Shape` is either a `Circle` with a `radius`, or a `Rectangle` with `width` and `height`. Nothing else is allowed; the type is **closed**.
 ### 1.2 TypeScript tagged unions
 
 TypeScript can emulate this with tagged unions (its own term for DUs).
@@ -35,12 +35,13 @@ The `kind` field is the **discriminator**. It lets the compiler narrow within a 
 
 Compared to F#, there is more boilerplate:
 
-- You must choose and repeat a tag field (`kind`, `type`, etc.).- Adding a new case means changing the union declaration plus all `switch`es that depend on it.
+- You must choose and repeat a tag field (`kind`, `type`, etc.).
+- Adding a new case means changing the union declaration plus all `switch`es that depend on it.
 For LLMs, you want to be explicit in your prompts:
 
 > “Model domain states as tagged unions with a string `kind` discriminator instead of using booleans, nullable properties, or loosely shaped objects.”
 
-This simple constraint already pushes output toward an F#-like style.
+Even this one constraint significantly shapes the output style.
 ***
 
 ## 2. Exhaustive Pattern Matching and `satisfies`
@@ -58,7 +59,7 @@ let area shape =
 If you later add `| Triangle of base: float * height: float`, the compiler warns unless you update `area`.
 ### 2.2 TypeScript exhaustive matching with `satisfies never`
 
-TypeScript’s `switch` doesn’t enforce exhaustiveness by default, but we can hack it using the `never` type and the `satisfies` operator.
+TypeScript's `switch` doesn't enforce exhaustiveness by default, but it can be approximated using the `never` type and the `satisfies` operator.
 ```ts
 function getArea(shape: Shape): number {
   let area: number;
@@ -76,8 +77,8 @@ function getArea(shape: Shape): number {
 }
 ```
 
-If you add a new `kind` to `Shape` but forget to handle it here, `shape satisfies never` will fail and the compiler will complain.
-This is the **consumption-site** exhaustiveness check: “When I consume a union, ensure I handle all cases.”
+If you add a new `kind` to `Shape` but forget to handle it here, `shape satisfies never` causes a compile-time error.
+This is the **consumption-site** exhaustiveness check.
 ### 2.3 Exhaustiveness at mapping sites
 
 You can also enforce exhaustiveness where you define “total mappings”—for example, mapping each colour to a hex code.
@@ -95,16 +96,16 @@ Here, `satisfies Record<Color, string>` ensures:
 
 - Every `Color` key is present.
 - The object’s literal types are preserved (you don’t widen to `Record<string, string>`).
-This is the **definition-site** check: “When I define a mapping over a union, ensure it is total.”
+This is the **definition-site** check: the object must cover all keys in the union.
 ### 2.4 Best practices for LLMs
 
-You can bake this pattern into prompts:
+Encode this in your prompts:
 
 > "For every `switch` on a tagged union, add a `default` case that assigns `value satisfies never` to the result variable so that missing cases are compile-time errors."
 
 > “For mappings over union keys, define objects that `satisfies Record<Union, T>` to guarantee all keys are covered.”
 
-These nudges move TypeScript closer to the F# match experience.
+Both together give TypeScript something close to F#'s match experience.
 ***
 
 ## 3. Immutability, Records, and Structural Equality
@@ -169,7 +170,6 @@ When steering LLMs:
 - “Use `ReadonlyArray` for lists and non-destructive updates via spread or pure functions.”
 - “Do not mutate function arguments or shared state.”
 
-These constraints align with F#’s default immutability.
 ***
 
 ## 4. Option/Result vs null/undefined
@@ -235,7 +235,7 @@ Callers must inspect `ok`, mirroring F#’s `Result`. Libraries like `neverthrow
 
 > “Avoid `null`; prefer `undefined` in `T | undefined` unions or explicit `Option`/`Result` types.”
 
-This aligns TS with F#’s explicit failure semantics.
+Both patterns bring TS closer to F#'s explicit failure semantics.
 ***
 
 ## 5. Pipelines and Composition
@@ -249,7 +249,7 @@ F#’s pipeline operator `|>` makes it easy to write left-to-right data flows.
 |> List.filter(fun x -> x > 5)
 ```
 
-This reads like a story: “start with 1..5, map, then filter.”
+The data flows left to right, making the intent clear.
 ### 5.2 TypeScript pipelines today
 
 For arrays, chain methods:
@@ -289,7 +289,7 @@ TC39’s pipeline proposal may eventually reduce the need for this, but for now,
 
 ## 6. Units of Measure and Branded Types
 
-Units of Measure are one of F#’s most beloved niche features: you can’t accidentally add metres and seconds.
+Units of Measure are one of F#'s most distinctive features: you can't accidentally add metres and feet.
 ### 6.1 F# Units of Measure
 
 ```fsharp
@@ -352,7 +352,7 @@ You cannot accidentally swap the arguments without a compile error.
 
 > “Define branded (nominal) types for all domain identifiers (e.g. `UserId`, `OrderId`) and measurements. Functions that operate on those values must use the branded types so they cannot be confused.”
 
-This gives you a strong F#-like level of domain safety in TS.
+The result is F#-like domain safety at the type level.
 ***
 
 ## 7. Active Patterns, Matchers, and Prisms
@@ -406,7 +406,7 @@ switch (method.type) {
 }
 ```
 
-You’ve effectively built an active pattern by hand.
+The result is effectively a hand-built active pattern.
 ### 7.3 Partial active patterns and `T | undefined`
 
 Partial active patterns—`(|Integer|_|)`—either match or they don’t. In TS, you can represent this via `T | undefined`:
@@ -426,8 +426,8 @@ This pairs nicely with nullish coalescing and avoids boolean blindness.
 In functional optics:
 
 - A **Lens** focuses on a part that **always exists** (e.g. `User.name`).- A **Prism** focuses on a part that **might exist**, often inside a union (e.g. the `Circle` inside `Shape`).
-Your matcher functions are essentially hand-built prisms: “Given arbitrary input, give me either `{ type: "Email"; ... }` or `{ type: "Unknown" }`.”
-Encouraging LLMs to create such matchers instead of embedding business logic in deeply nested `if` chains yields more F#-like structure.
+Matcher functions are hand-built prisms: given arbitrary input, return either `{ type: "Email"; ... }` or `{ type: "Unknown" }`.
+Asking LLMs to produce matchers rather than deeply nested `if` chains produces more F#-like structure.
 ### 7.5 Prompting for classification-first design
 
 > “Don’t embed complex business logic directly in UI handlers or controllers. Instead, create ‘matcher’ functions that classify raw inputs into tagged unions, then handle those via exhaustive `switch` with `satisfies never`.”
@@ -470,7 +470,7 @@ function canAccess(user: User): Access {
 }
 ```
 
-Now the caller can distinguish why access was allowed or denied.
+The caller can then distinguish why access was allowed or denied.
 ### 8.3 Template literal types as parameterised patterns
 
 Template literal types let you encode information into string shapes.
@@ -526,7 +526,7 @@ After calling `assertIsPositive(value)`, the compiler treats `value` as `Positiv
 
 > “Use template literal types for domain-specific string formats: e.g. `ID_${string}`, `${number}px`, etc.”
 
-These rules dramatically reduce boolean blindness and align with F#’s DU-heavy style.
+Both rules reduce boolean blindness and push toward F#'s DU-heavy style.
 ***
 
 ## 9. Lists, Arrays, and Persistent Data Structures
@@ -559,7 +559,7 @@ The illusion of immutability through spreads has a cost: `[newItem, ...oldArray]
 
 > “Use `ReadonlyArray<T>` and avoid mutating arrays in place (`push`, `splice`, `sort` in place). Use non-mutating methods (e.g. `map`, `filter`) or return new arrays.”
 
-This retains the functional, “data-in/data-out” flavour of F#’s list processing.
+This preserves the functional, data-in/data-out character of F#'s list processing.
 ***
 
 ## 10. Modules vs Companion Objects and File Modules
@@ -608,7 +608,7 @@ const user = User.create(userId, "alice");
 if (User.validate(user)) { /* ... */ }
 ```
 
-You get the ergonomic “module-dot-function” style of F# in TypeScript.
+This gives the `Module.function` style familiar from F#.
 ### 10.3 Namespaces (and why to avoid them)
 
 TypeScript also has `namespace`:
@@ -631,7 +631,7 @@ F# uses `.fsi` signature files; TypeScript uses `export` and “barrel” files:
 
 > “Organise the code using a module-per-domain-type approach. For each domain entity, create a file defining the `type` and a `const` with the same name that contains pure functions. Do not use classes.”
 
-This leads LLMs away from anemic classes and toward F#-like module design.
+This discourages anemic class patterns in favour of F#-like module design.
 ***
 
 ## 11. Consolidated Mapping: F# Features to TypeScript Patterns
@@ -640,8 +640,8 @@ This leads LLMs away from anemic classes and toward F#-like module design.
 |---------------------------|------------------------------------------------------------------|----------------------------------------------|
 | Discriminated Union       | Tagged union with `kind` discriminator                          | High; more boilerplate                        |
 | Exhaustive pattern match  | `switch` + `satisfies never`                                     | High at usage and mapping sites               |
-| Active Patterns           | Matcher functions, prisms returning tagged unions or `T | undefined` | Medium; manual ceremony                       |
-| Option                    | `T | undefined` or `Option<T>` DU                                | High in practice                              |
+| Active Patterns           | Matcher functions, prisms returning tagged unions or `T \| undefined` | Medium; manual ceremony                       |
+| Option                    | `T \| undefined` or `Option<T>` DU                                | High in practice                              |
 | Result                    | `Result<T, E>` tagged union or `neverthrow`/`fp-ts`              | High with discipline                          |
 | Records                   | `type`/`interface` + `readonly`                                 | High; no built-in structural equality         |
 | Units of Measure          | Branded types (`Brand<T, Tag>`)                                  | Medium; arithmetic & JSON require helpers     |
@@ -656,7 +656,7 @@ This leads LLMs away from anemic classes and toward F#-like module design.
 
 ## 12. A “Golden Prompt Library” for F#-Style TypeScript
 
-To make this article actionable, you can create a reusable “prompt header” that you paste into your LLM sessions when generating code.
+These prompts can be combined into a reusable header that you paste into LLM sessions when generating code.
 
 ### 12.1 Structural modelling
 
@@ -682,7 +682,7 @@ To make this article actionable, you can create a reusable “prompt header” t
 
 > “Organise code by domain module: one file per entity with a `type` for data and a `const` with the same name providing pure functions. Do not use classes; prefer pure functions, immutable data, and pipelines over mutation.”
 
-You can tweak wording depending on the model, but these constraints collectively push the generated TypeScript into an F#-inspired, functional, and safer style.
+Wording can be adjusted to suit the model, but together these constraints steer generated TypeScript toward a more functional, F#-inspired style.
 ***
 
-By treating TypeScript as a host language for F#’s ideas—rather than a JavaScript-with-types afterthought—you get a language that works *with* your design, not against it. And by encoding these patterns into how you talk to LLMs, you can turn them from “JavaScript juniors” into functional programming apprentices.
+TypeScript is flexible enough to host most of F#'s core ideas. Encoding these patterns into LLM prompts means that flexibility works in your favour rather than against it.
