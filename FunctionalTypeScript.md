@@ -12,6 +12,7 @@ This article is a blueprint for bending TypeScript in that direction, using conc
 ## 1. Discriminated Unions
 
 In F#, discriminated unions (DUs) are the primary way to model domain states explicitly, rather than relying on booleans, flags, or "nullable" fields.
+
 ### 1.1 F# discriminated unions
 
 ```fsharp
@@ -21,6 +22,7 @@ type Shape =
 ```
 
 A `Shape` is either a `Circle` with a `radius`, or a `Rectangle` with `width` and `height`. Nothing else is allowed; the type is **closed**.
+
 ### 1.2 TypeScript discriminated unions
 
 TypeScript can emulate this with discriminated unions.
@@ -31,6 +33,7 @@ type Shape =
 ```
 
 The `kind` field is the **discriminant property**. It lets the compiler narrow within a `switch` or `if` chain.
+
 #### Boilerplate and gaps
 
 Compared to F#, there is more boilerplate:
@@ -47,6 +50,7 @@ Even this one constraint significantly shapes the output style.
 ## 2. Exhaustive Pattern Matching (`never` + `satisfies`)
 
 F#’s `match` is more than syntactic sugar: the compiler can tell you when you’ve forgotten to handle a case.
+
 ### 2.1 F# exhaustive pattern matching
 
 ```fsharp
@@ -57,6 +61,7 @@ let area shape =
 ```
 
 If you later add `| Triangle of base: float * height: float`, the compiler warns unless you update `area`.
+
 ### 2.2 TypeScript exhaustive matching with `satisfies never`
 
 TypeScript's `switch` doesn't enforce exhaustiveness by default, but you can force a compile-time check in the `default` branch using `value satisfies never` (introduced in TypeScript 4.9).
@@ -76,6 +81,7 @@ function getArea(shape: Shape): number {
 
 If you add a new `kind` to `Shape` but forget to handle it here, the `shape satisfies never` line becomes a compile-time error.
 This is the **consumption-site** exhaustiveness check.
+
 ### 2.3 Exhaustiveness at mapping sites
 
 You can also enforce exhaustiveness where you define “total mappings”—for example, mapping each colour to a hex code.
@@ -93,7 +99,9 @@ Here, `satisfies Record<Color, string>` ensures:
 
 - Every `Color` key is present.
 - The object’s literal types are preserved (you don’t widen to `Record<string, string>`).
+
 This is the **definition-site** check: the object must cover all keys in the union.
+
 ### 2.4 Best practices for LLMs
 
 Encode this in your prompts:
@@ -108,6 +116,7 @@ Both together give TypeScript something close to F#'s match experience.
 ## 3. Immutability, Records, and Structural Equality
 
 In F#, records are immutable by default and compared structurally.
+
 ### 3.1 F# records
 
 ```fsharp
