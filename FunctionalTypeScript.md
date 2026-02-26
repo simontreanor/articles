@@ -127,6 +127,7 @@ let p1 = { Name = "Alice"; Age = 30 }
 ```
 
 Two records with identical fields and values are equal.
+
 ### 3.2 TypeScript records with `readonly`
 
 TypeScript emulates records with object types and the `readonly` modifier:
@@ -153,6 +154,7 @@ const people: ReadonlyArray<Person> = [
 ### 3.3 Structural equality gap
 
 TypeScript uses reference equality for objects: `{ name: "Alice", age: 30 } === { name: "Alice", age: 30 }` is `false`. You need helper functions or libraries (`fast-deep-equal`, etc.) for structural equality.
+
 ### 3.4 Non-destructive updates
 
 F# has `with` for persistent updates:
@@ -168,6 +170,7 @@ const older: Person = { ...p1, age: p1.age + 1 };
 ```
 
 This is more verbose but conceptually similar.
+
 ### 3.5 Prompting for immutable style
 
 When steering LLMs:
@@ -181,6 +184,7 @@ When steering LLMs:
 ## 4. Option/Result vs null/undefined
 
 F# avoids `null` by design, preferring `Option<'a>` and `Result<'a, 'e>`.
+
 ### 4.1 F# `Option` and `Result`
 
 ```fsharp
@@ -195,6 +199,7 @@ let tryParseInt input =
 ```
 
 Returning `Option` or `Result` forces callers to handle missing data and errors explicitly.
+
 ### 4.2 TypeScript `Option` emulation
 
 TypeScript relies on unions and strict null checking:
@@ -218,6 +223,7 @@ type Option<T> = { kind: "some"; value: T } | { kind: "none" };
 ```
 
 …but in practice, `T | undefined` often wins on ergonomics.
+
 ### 4.3 TypeScript `Result` emulation
 
 A discriminated union is a natural fit:
@@ -235,6 +241,7 @@ function divideSafe(x: number, y: number): Result<number, "DivideByZero"> {
 ```
 
 Callers must inspect `ok`, mirroring F#'s `Result`. Libraries like `neverthrow` and `Effect` provide richer ecosystems around this idea.
+
 ### 4.4 LLM guidance
 
 > “Do not throw exceptions for domain-level failures. Instead, return a `Result<T, E>` discriminated union.”
@@ -247,6 +254,7 @@ Both patterns bring TS closer to F#'s explicit failure semantics.
 ## 5. Pipelines, Currying, and Composition
 
 F#’s pipeline operator `|>` makes it easy to write left-to-right data flows.
+
 ### 5.1 F# pipelines
 
 ```fsharp
@@ -256,6 +264,7 @@ F#’s pipeline operator `|>` makes it easy to write left-to-right data flows.
 ```
 
 The data flows left to right, making the intent clear.
+
 ### 5.2 TypeScript pipelines today
 
 For arrays, method chaining already reads left to right and there is no reason to reach for `pipe`.
@@ -293,6 +302,7 @@ const label = pipe(basePrice, applyDiscount(0.1), applyVat, formatCurrency);
 TC39's pipeline proposal may eventually reduce the need for this, but for now, a standard `pipe` helper is a good pattern to encourage from LLMs.
 
 (If you want to track the proposal directly, the repository is: https://github.com/tc39/proposal-pipeline-operator)
+
 ### 5.3 Currying and partial application
 
 In F#, all functions are curried automatically: a two-argument function is really a function that returns a function, so partial application requires no extra syntax:
@@ -334,6 +344,7 @@ Preferring curried arrow functions eliminates those wrappers and keeps pipeline 
 ## 6. Units of Measure and Branded Types
 
 Units of Measure are one of F#'s most distinctive features: you can't accidentally add metres and feet.
+
 ### 6.1 F# Units of Measure
 
 ```fsharp
@@ -363,6 +374,7 @@ const dFeet   = Feet(32.8);
 ```
 
 You can generalise this using `unique symbol` for extra safety:
+
 ```ts
 declare const __brand: unique symbol;
 
@@ -389,10 +401,12 @@ function updateUser(id: UserId, orgId: OrgId) { /* ... */ }
 ```
 
 You cannot accidentally swap the arguments without a compile error.
+
 ### 6.4 Arithmetic and JSON gaps
 
 - Arithmetic on brands tends to “forget” the brand (because the compiler sees `number` operations), so you may need domain-specific helpers or re-branding.
 - When deserialising JSON, brands don’t exist at runtime; you must re-validate and brand at the boundary (e.g. using Zod).
+
 ### 6.5 Prompting for branded types
 
 > “Define branded (nominal) types for all domain identifiers (e.g. `UserId`, `OrderId`) and measurements. Functions that operate on those values must use the branded types so they cannot be confused.”
@@ -403,6 +417,7 @@ The result is F#-like domain safety at the type level.
 ## 7. Active Patterns, Matchers, and Prisms
 
 Active Patterns in F# are an advanced feature that let you define *views* over data. They encode classification logic directly into pattern matching.
+
 ### 7.1 Multi-case active patterns in F#
 
 ```fsharp
@@ -420,6 +435,7 @@ let describe input =
 ```
 
 The pattern both **classifies** and **transforms** the data.
+
 ### 7.2 TypeScript “matcher function” pattern
 
 TypeScript doesn’t have syntax to transform during the `switch` head, so you do it just before, via a matcher function that returns a discriminated union.
@@ -453,6 +469,7 @@ switch (method.type) {
 ```
 
 The result is effectively a hand-built active pattern.
+
 ### 7.3 Partial active patterns and `T | undefined`
 
 Partial active patterns—`(|Integer|_|)`—either match or they don’t. In TS, you can represent this via `T | undefined`:
@@ -467,6 +484,7 @@ const n = asInteger("42") ?? 0;
 ```
 
 This pairs nicely with nullish coalescing and avoids boolean blindness.
+
 ### 7.4 Prisms and lenses
 
 In functional optics:
@@ -484,6 +502,7 @@ This separates *classification* from *handling*, much like active patterns.
 ## 8. Boolean Blindness and Type-Level Literals
 
 Boolean blindness is what happens when a `boolean` returns from a function but the *reason* behind `true` or `false` is not encoded anywhere.
+
 ### 8.1 The blind approach
 
 ```ts
@@ -498,6 +517,7 @@ if (canAccess(user)) {
 ```
 
 You lose all nuance: “admin”, “subscriber”, “grace period”, etc.
+
 ### 8.2 Union-of-reasons result
 
 Instead, return a discriminated union:
@@ -517,6 +537,7 @@ function canAccess(user: User): Access {
 ```
 
 The caller can then distinguish why access was allowed or denied.
+
 ### 8.3 Template literal types as parameterised patterns
 
 Template literal types let you encode information into string shapes.
@@ -551,6 +572,7 @@ function checkFactor<N extends number>(
 ```
 
 The result type carries the factor it matched against.
+
 ### 8.4 Assertion functions
 
 Where type-level encodings become unwieldy, assertion functions are the TS analogue of pattern-based narrowing:
@@ -566,6 +588,7 @@ function assertIsPositive(n: number): asserts n is PositiveNumber {
 ```
 
 After calling `assertIsPositive(value)`, the compiler treats `value` as `PositiveNumber` inside that scope.
+
 ### 8.5 Prompting away from booleans
 
 > “Avoid returning `boolean` for domain decisions. Return a union of literal types or a discriminated union that encodes the *reason* for the outcome.”
@@ -578,6 +601,7 @@ Both rules reduce boolean blindness and push toward F#'s DU-heavy style.
 ## 9. Lists, Arrays, and Persistent Data Structures
 
 F# lists are immutable linked lists; JS/TS arrays are mutable, indexed sequences.
+
 ### 9.1 F# lists
 
 ```fsharp
@@ -586,6 +610,7 @@ let more    = 0 :: numbers     // prepend is O(1)
 ```
 
 F# also has arrays and other structures, but lists are idiomatic for many recursive and functional patterns.
+
 ### 9.2 TypeScript arrays and `ReadonlyArray`
 
 TypeScript’s default `T[]` is mutable. To approximate F# lists, use `ReadonlyArray<T>`:
@@ -601,6 +626,7 @@ const ys = [0, ...xs]; // creates a new array
 The illusion of immutability through spreads has a cost: `[newItem, ...oldArray]` copies the entire array. For small lists (UI-level code) this is usually fine; for high-throughput data processing, consider:
 - Structuring transforms as pipelines without excessive copying.
 - Using libraries providing persistent data structures (e.g. Immutable.js, Immer in "copy-on-write" style).
+
 ### 9.4 Prompting for immutable collections
 
 > “Use `ReadonlyArray<T>` and avoid mutating arrays in place (`push`, `splice`, `sort` in place). Use non-mutating methods (e.g. `map`, `filter`) or return new arrays.”
@@ -611,6 +637,7 @@ This preserves the functional, data-in/data-out character of F#'s list processin
 ## 10. Modules vs Companion Objects and File Modules
 
 In F#, you group related types and functions into modules, giving you names like `List.map` or `User.create`.
+
 ### 10.1 F# modules
 
 ```fsharp
@@ -657,6 +684,7 @@ if (User.validate(user)) { /* ... */ }
 ```
 
 This gives the `Module.function` style familiar from F#.
+
 ### 10.3 Namespaces (and why to avoid them)
 
 TypeScript also has `namespace`:
@@ -669,12 +697,14 @@ namespace User {
 ```
 
 This looks very F#-like, but is discouraged in modern code because it doesn’t play nicely with tree-shaking and bundlers compared to ES modules.
+
 ### 10.4 Public API control
 
 F# uses `.fsi` signature files; TypeScript uses `export` and “barrel” files:
 
 - Export only public entities from `index.ts`.
 - Keep internal helpers unexported so they’re effectively module-private.
+
 ### 10.5 Prompting for module structure
 
 > “Organise the code using a module-per-domain-type approach. For each domain entity, create a file defining the `type` and a `const` with the same name that contains pure functions. Do not use classes.”
@@ -730,6 +760,7 @@ These prompts can be combined into a reusable header that you paste into LLM ses
 ### 12.6 Organisation and style
 
 > “Organise code by domain module: one file per entity with a `type` for data and a `const` with the same name providing pure functions. Do not use classes; prefer pure functions, immutable data, and pipelines over mutation.”
+
 ### 12.7 Pipelines and currying
 
 > "Prefer curried arrow functions for any function that will be partially applied or used as a pipeline step: `const f = (a: A) => (b: B) => ...` rather than `(a: A, b: B) => ...`. Use a `pipe` helper to compose sequences of such functions left to right."
