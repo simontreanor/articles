@@ -252,36 +252,34 @@ F#’s pipeline operator `|>` makes it easy to write left-to-right data flows.
 The data flows left to right, making the intent clear.
 ### 5.2 TypeScript pipelines today
 
-For arrays, chain methods:
+For arrays, method chaining already reads left to right and there is no reason to reach for `pipe`.
+
+Where `pipe` earns its keep is composing standalone domain functions that have no prototype methods to chain. Without it, multi-step transforms nest right to left — the opposite order to execution:
 
 ```ts
-const result =
-  [1, 2, 3, 4, 5]
-    .map(x => x * 2)
-    .filter(x => x > 5);
+// Reads right to left — hard to follow
+const label = formatCurrency(applyVat(applyDiscount(0.1)(basePrice)));
 ```
 
-For general functions, you can define a `pipe` helper:
+A `pipe` helper restores execution order:
 
 ```ts
 type Unary<A, B> = (a: A) => B;
 
 function pipe<A, B>(a: A, ab: Unary<A, B>): B;
 function pipe<A, B, C>(a: A, ab: Unary<A, B>, bc: Unary<B, C>): C;
+function pipe<A, B, C, D>(a: A, ab: Unary<A, B>, bc: Unary<B, C>, cd: Unary<C, D>): D;
 // …more overloads…
 function pipe(a: unknown, ...fns: Unary<any, any>[]): unknown {
   return fns.reduce((v, f) => f(v), a);
 }
-```
 
-Then:
+const applyDiscount  = (pct: number) => (amount: number) => amount * (1 - pct);
+const applyVat       = (amount: number) => amount * 1.2;
+const formatCurrency = (amount: number) => `£${amount.toFixed(2)}`;
 
-```ts
-const result = pipe(
-  [1, 2, 3, 4, 5],
-  xs => xs.map(x => x * 2),
-  xs => xs.filter(x => x > 5),
-);
+// Reads left to right — steps in execution order
+const label = pipe(basePrice, applyDiscount(0.1), applyVat, formatCurrency);
 ```
 
 TC39’s pipeline proposal may eventually reduce the need for this, but for now, a standard `pipe` helper is a good pattern to encourage from LLMs.
