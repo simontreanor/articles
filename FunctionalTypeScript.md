@@ -98,7 +98,7 @@ This is the **definition-site** check: the object must cover all keys in the uni
 
 Encode this in your prompts:
 
-> "For every `switch` on a discriminated union, add a `default` case like `default: { value satisfies never; throw new Error('unreachable'); }` so that missing cases become compile-time errors."
+> "For every `switch` on a discriminated union, add a `default` case like ``default: { throw new Error(`Unhandled value: ${value satisfies never}`); }`` so that missing cases become compile-time errors."
 
 > “For mappings over union keys, define objects that `satisfies Record<Union, T>` to guarantee all keys are covered.”
 
@@ -405,8 +405,8 @@ let (|Email|Phone|Unknown|) (input: string) =
 
 let describe input =
     match input with
-    | Email addr -> sprintf "Email: %s" addr
-    | Phone num  -> sprintf "Phone: %s" num
+    | Email addr -> $"Email: {addr}"
+    | Phone num  -> $"Phone: {num}"
     | Unknown    -> "Unknown contact method"
 ```
 
@@ -438,8 +438,7 @@ switch (method.type) {
   case "Unknown":
     break;
   default: {
-    method satisfies never;
-    throw new Error("Unhandled ContactMethod");
+    throw new Error(`Unhandled ContactMethod: ${method satisfies never}`);
   }
 }
 ```
@@ -705,7 +704,7 @@ These prompts can be combined into a reusable header that you paste into LLM ses
 
 ### 12.2 Exhaustiveness
 
-> “All `switch` statements over discriminated unions must be exhaustive. Add a `default` branch like `default: { value satisfies never; throw new Error('unreachable'); }` so that missing cases cause compile-time errors.”
+> “All `switch` statements over discriminated unions must be exhaustive. Add a `default` branch like ``default: throw new Error(`Unhandled value: ${value satisfies never}`);`` so that missing cases cause compile-time errors.”
 
 ### 12.3 Domain safety and branded types
 
