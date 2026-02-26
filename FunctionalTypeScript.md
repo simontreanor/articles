@@ -238,7 +238,7 @@ Callers must inspect `ok`, mirroring F#'s `Result`. Libraries like `neverthrow` 
 Both patterns bring TS closer to F#'s explicit failure semantics.
 ***
 
-## 5. Pipelines and Composition
+## 5. Pipelines, Currying, and Composition
 
 F#’s pipeline operator `|>` makes it easy to write left-to-right data flows.
 ### 5.1 F# pipelines
@@ -282,7 +282,43 @@ const formatCurrency = (amount: number) => `£${amount.toFixed(2)}`;
 const label = pipe(basePrice, applyDiscount(0.1), applyVat, formatCurrency);
 ```
 
-TC39’s pipeline proposal may eventually reduce the need for this, but for now, a standard `pipe` helper is a good pattern to encourage from LLMs.
+TC39's pipeline proposal may eventually reduce the need for this, but for now, a standard `pipe` helper is a good pattern to encourage from LLMs.
+### 5.3 Currying and partial application
+
+In F#, all functions are curried automatically: a two-argument function is really a function that returns a function, so partial application requires no extra syntax:
+
+```fsharp
+let multiply x y = x * y
+let double = multiply 2   // partially applied — double : int -> int
+```
+
+TypeScript has no automatic currying, but the same effect is straightforward using nested arrow functions:
+
+```ts
+// Two-argument form — cannot partially apply
+const multiply = (x: number, y: number) => x * y;
+
+// Curried form — first call fixes x, second call provides y
+const multiplyC = (x: number) => (y: number) => x * y;
+const double = multiplyC(2); // (y: number) => number
+```
+
+This matters for `pipe`, which expects unary functions at every step. The `applyDiscount(0.1)` call in §5.2 works precisely because `applyDiscount` is curried: calling it with one argument returns the unary function that `pipe` then applies to `basePrice`.
+
+A non-curried helper would need wrapping:
+
+```ts
+const applyDiscountFlat = (pct: number, amount: number) => amount * (1 - pct);
+
+// Must wrap to make it unary
+const label = pipe(basePrice, x => applyDiscountFlat(0.1, x), applyVat, formatCurrency);
+```
+
+Preferring curried arrow functions eliminates those wrappers and keeps pipeline steps visually clean.
+
+### 5.4 LLM guidance
+
+> "Prefer curried arrow functions for any function that will be partially applied or used as a pipeline step: `const f = (a: A) => (b: B) => ...` rather than `(a: A, b: B) => ...`."
 ***
 
 ## 6. Units of Measure and Branded Types
@@ -645,6 +681,7 @@ This discourages anemic class patterns in favour of F#-like module design.
 | Units of Measure          | Branded types (`Brand<T, Tag>`)                                  | Medium; arithmetic & JSON require helpers     |
 | Lists (linked)           | `ReadonlyArray<T>` or persistent data structures library         | Low–medium; semantics differ                  |
 | Pipelines                 | Chaining or `pipe(...)` helper                                   | Medium; pending pipeline operator             |
+| Automatic currying        | Curried arrow functions `(a: A) => (b: B) => ...`               | Medium; explicit, no language support         |
 | Modules                   | File modules + companion objects                                 | High in practice                              |
 | Null avoidance            | `strictNullChecks`, `undefined`, explicit unions                 | High with discipline                          |
 | Boolean-free domain logic | Unions of literal reasons, template literal types                | High; requires design and conventions         |
@@ -679,7 +716,9 @@ These prompts can be combined into a reusable header that you paste into LLM ses
 ### 12.6 Organisation and style
 
 > “Organise code by domain module: one file per entity with a `type` for data and a `const` with the same name providing pure functions. Do not use classes; prefer pure functions, immutable data, and pipelines over mutation.”
+### 12.7 Pipelines and currying
 
+> "Prefer curried arrow functions for any function that will be partially applied or used as a pipeline step: `const f = (a: A) => (b: B) => ...` rather than `(a: A, b: B) => ...`. Use a `pipe` helper to compose sequences of such functions left to right."
 Wording can be adjusted to suit the model, but together these constraints steer generated TypeScript toward a more functional, F#-inspired style.
 ***
 
