@@ -1,5 +1,15 @@
 remote_theme: jekyll/minima
 minima:
   skin: auto
+  social_links:
+    - title: GitHub
+      icon: github
+      url: "https://github.com/simontreanor"
+    - title: LinkedIn
+      icon: linkedin
+      url: "https://www.linkedin.com/in/simontreanor/"
+    - title: Bluesky
+      icon: bluesky
+      url: "https://bsky.app/profile/simontreanor.bsky.social"
 plugins:
 - jekyll-remote-theme

@@ -309,8 +309,6 @@ const label = pipe(basePrice, applyDiscount(0.1), applyVat, formatCurrency)
 
 TC39's pipeline proposal may eventually reduce the need for this, but for now, a standard `pipe` helper is a good pattern to encourage from LLMs.
 
-(If you want to track the proposal directly, the repository is: https://github.com/tc39/proposal-pipeline-operator)
-
 ### 5.3 Currying and partial application
 
 In F#, all functions are curried automatically: a two-argument function is really a function that returns a function, so partial application requires no extra syntax:
@@ -716,10 +714,12 @@ This looks very F#-like, but is discouraged in modern code because it doesn’t 
 
 ### 10.4 Public API control
 
-F# uses `.fsi` signature files; TypeScript uses `export` and “barrel” files:
+F# supports `.fsi` signature files that explicitly declare which types and functions are visible outside a module — though in practice many projects skip them. `.fsi` files are entirely optional: without one, all top-level bindings in the `.fs` file are implicitly public. The main cost is the maintenance overhead of keeping `.fsi` and `.fs` in sync.
 
-- Export only public entities from `index.ts`.
-- Keep internal helpers unexported so they’re effectively module-private.
+TypeScript achieves the same goal through `export` and "barrel" files:
+
+- Anything not marked `export` is invisible to importers, making unexported helpers effectively module-private.
+- A top-level `index.ts` can re-export only the symbols external consumers should see, hiding implementation details that live in other files in the same folder.
 
 ### 10.5 Prompting for module structure
 
@@ -824,6 +824,8 @@ Copy-on-write updates via a `produce` function that accepts a mutable draft. The
 ## Appendix B: The TC39 Pipeline Operator
 
 Section 5 mentions TC39's pipeline operator proposal as a potential future improvement to `pipe` helper ergonomics. Its progress is worth understanding before relying on it.
+
+(If you want to track the proposal directly, the repository is: <https://github.com/tc39/proposal-pipeline-operator>)
 
 ### Current status
 
